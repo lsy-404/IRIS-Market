@@ -9,4 +9,3 @@ changing work plans.
 
 The plugin has no access to credentials, subscription dates, account labels or
 raw quota windows. Its Load correction is capped and expires automatically.
-

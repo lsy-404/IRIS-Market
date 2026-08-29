@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "iris-market",
+  "account_id": "df4481f3ce1fa0394b4617442a97d147",
+  "pages_build_output_dir": "./site",
+  "compatibility_date": "2026-08-29"
+}

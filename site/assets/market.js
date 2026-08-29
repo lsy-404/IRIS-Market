@@ -47,4 +47,3 @@ try {
 } catch {
   marketEl.replaceChildren(element('p', 'loading', 'The market catalogue is temporarily unavailable. You can still inspect the public repository.'));
 }
-

@@ -6,4 +6,3 @@
     "verify": "node scripts/validate-market.cjs"
   }
 }
-
