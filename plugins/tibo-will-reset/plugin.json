@@ -1,0 +1,30 @@
+{
+  "manifestVersion": 2,
+  "id": "tibo-will-reset",
+  "name": "Tibo will reset?",
+  "version": "1.0.0",
+  "description": "Monitors configured public posts from Tibo. With an active ChatGPT subscription, it publishes a clearly labelled reset signal and only makes a short, capped automatic Load correction.",
+  "menu": { "label": "Tibo will reset?" },
+  "settings": [
+    {
+      "key": "plugin.tibo-will-reset.feed_url",
+      "label": "Public feed URL",
+      "description": "Use a public timeline feed for @thsottiaux. The default endpoint is best-effort and may rate-limit anonymous requests.",
+      "type": "string",
+      "default": "https://syndication.twitter.com/srv/timeline-profile/screen-name/thsottiaux"
+    }
+  ],
+  "runtime": {
+    "entry": "extension.cjs",
+    "agents": ["M"],
+    "permissions": ["prompt:observe", "network:fetch", "subscription:read", "load:adjust", "notification:publish", "monitor:run"],
+    "network": {
+      "origins": ["https://syndication.twitter.com", "https://x.com"]
+    },
+    "monitor": { "intervalMinutes": 15, "handler": "checkTibo" },
+    "hooks": [
+      { "event": "before_prompt", "handler": "managementContext", "agents": ["M"] }
+    ]
+  }
+}
+

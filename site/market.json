@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "name": "IRIS Market",
+  "description": "Public, source-available plugins for IRIS.",
+  "plugins": [
+    {
+      "id": "tibo-will-reset",
+      "name": "Tibo will reset?",
+      "version": "1.0.0",
+      "summary": "Uses public Tibo posts as a bounded, clearly labelled signal for automatic Load estimation.",
+      "category": "Monitoring",
+      "targets": ["M"],
+      "status": "preview",
+      "license": "MIT",
+      "compatibility": { "irisPluginRuntime": ">=2" },
+      "source": { "type": "repository", "path": "plugins/tibo-will-reset" },
+      "requirements": [
+        "An active ChatGPT subscription recognized by IRIS",
+        "A reachable public X timeline feed for @thsottiaux"
+      ],
+      "permissions": [
+        "prompt:observe",
+        "network:fetch",
+        "subscription:read",
+        "load:adjust",
+        "notification:publish",
+        "monitor:run"
+      ],
+      "disclosure": "A post is not proof of an individual quota reset. The plugin never receives account credentials, balances, or billing dates."
+    }
+  ]
+}
+

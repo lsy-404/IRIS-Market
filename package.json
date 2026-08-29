@@ -1,0 +1,9 @@
+{
+  "name": "iris-market",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.cjs",
+    "verify": "node scripts/validate-market.cjs"
+  }
+}
+

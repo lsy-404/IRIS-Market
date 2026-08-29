@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Public, source-available plugins for IRIS.">
+    <title>IRIS Market</title>
+    <link rel="stylesheet" href="./assets/market.css">
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <p class="eyebrow">IRIS WEB · PUBLIC MARKET</p>
+        <h1>IRIS Market</h1>
+        <p class="lede">A public catalogue of source-available plugins for IRIS. Read the code, inspect permissions, then install what belongs in your workflow.</p>
+        <a class="source-link" href="https://github.com/wuyilingwei/IRIS-Market">View source on GitHub <span aria-hidden="true">↗</span></a>
+      </header>
+
+      <section class="principles" aria-label="Marketplace principles">
+        <article><strong>Public by default</strong><span>Packages and their permission declarations are reviewable before installation.</span></article>
+        <article><strong>Bounded capabilities</strong><span>Plugins declare exactly what they may observe, fetch, publish or adjust.</span></article>
+        <article><strong>No quota fiction</strong><span>Signals help Load planning; they never overwrite provider-reported usage.</span></article>
+      </section>
+
+      <section class="catalogue" aria-labelledby="catalogue-title">
+        <div class="section-heading"><p class="eyebrow">CATALOGUE</p><h2 id="catalogue-title">Available plugins</h2></div>
+        <div id="market" class="market" aria-live="polite"><p class="loading">Loading market catalogue…</p></div>
+      </section>
+
+      <section class="install" aria-labelledby="install-title">
+        <p class="eyebrow">INSTALL</p><h2 id="install-title">Bring a reviewed package into IRIS.</h2>
+        <ol><li>Download or clone the public package.</li><li>Open <b>Plugins</b> in IRIS and select <b>Install from folder</b>.</li><li>Choose the package directory and review its permissions.</li></ol>
+      </section>
+    </main>
+    <footer>IRIS Market · Public packages, local installation.</footer>
+    <script src="./assets/market.js" type="module"></script>
+  </body>
+</html>
+
