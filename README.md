@@ -28,11 +28,11 @@ authoritative quota monitor.
 ## Development
 
 ```sh
-npm run verify
-npm test
-npx wrangler pages dev site
+pnpm run verify
+pnpm test
+pnpm dlx wrangler pages dev site
 ```
 
 The repository contains no credentials or private IRIS services.
 `site/market.json` is the catalogue consumed by the static market page and is
-checked against each package manifest by `npm run verify`.
+checked against each package manifest by `pnpm run verify`.
