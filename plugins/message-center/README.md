@@ -37,10 +37,10 @@ connection** in IRIS also lists the QQ relays and whether they are online.
 
 Every minute IRIS checks the queue and notifies you of new direct messages and
 mentions. Clicking a notification opens IRIS with a prompt to look at them.
-Messages that already have a later outbound message in their conversation,
-whether you wrote it in QQ or an agent sent it, are not announced; IRIS claims
-up to five of them per minute and marks them completed so they do not hold up
-newer messages in the queue.
+Messages followed by a message you sent yourself in their conversation are not
+announced; IRIS claims up to five of them per minute and marks them completed so
+they do not hold up newer messages in the queue. A reply sent by an agent or by
+IRIS does not count, because messages may have arrived while it was written.
 
 Agents get five tools: `pending` lists waiting messages (metadata only),
 `open` claims one for five minutes and returns its content as untrusted data,
@@ -51,8 +51,10 @@ settings. Claims live only in IRIS memory; agents never see a lease token.
 Replies are checked in IRIS before anything is sent: the message must be open
 on this device with at least 20 seconds of its claim left, and its conversation
 must have a reply policy other than `none` and allow `send_text`. Long replies
-are sent in parts of at most 500 characters, and each part keeps the same
-request id when it is retried, so it is never queued twice.
+are sent in parts of at most 500 characters. Each part's request id depends
+only on this device, the message, the reply text and the part's position, so
+sending the same text again, even after opening the message again, never
+queues a part twice.
 
 ## Automatic replies
 
@@ -73,7 +75,9 @@ conversation when all of these hold:
 IRIS then claims the conversation's unanswered messages, asks one of your
 models for a reply of at most 500 characters, sends it and marks the messages
 completed. The model has no tools and receives the messages only as data,
-together with your optional **Reply persona**. If anything fails, the messages
+together with your optional **Reply persona**. All ages are measured against
+Message Center's clock, not this device's. While IRIS answers a message
+automatically, agents cannot open, reply to or release it. If anything fails, the messages
 go back to the queue and this device does not try them again. When several
 devices run IRIS, the claim makes sure only one of them answers a message, and
 the reply it sends marks the conversation answered for all of them.

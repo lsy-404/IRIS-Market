@@ -117,21 +117,22 @@ function candidates(listed) {
   }).sort((left, right) => left.receivedAt - right.receivedAt);
 }
 
-async function claim(host, payload, messageId) {
+async function claim(host, payload, messageId, auto = false) {
   // Message Center grants five minutes from its own clock; counting from before the request keeps the deadline local and early.
   const expiresAt = Date.now() + LEASE_MS;
   const result = await call(host, 'claim_message', { consumerId: consumerId(payload), messageId });
   if (result.acquired !== true) return { lease: null, reason: plain(record(result.race).reason, 60) || 'not_claimable' };
   const message = record(result.message);
   if (typeof message.leaseToken !== 'string') throw new Error('claim_message returned no lease');
-  const lease = { token: message.leaseToken, expiresAt, scope: record(message.scope), message, sent: 0, draft: null, busy: false };
+  const lease = { token: message.leaseToken, expiresAt, scope: record(message.scope), message, auto, sent: 0, draft: null, busy: false };
   leases.set(messageId, lease);
   return { lease };
 }
 
-/** Stable for every retry under one claim, so Message Center queues each part at most once. */
-function clientRequestId(messageId, lease, index) {
-  const id = `iris-${messageId}-${lease.token.slice(0, 8)}-${index}`;
+/** Depends only on the device, message, reply text and part, so a retry under any later claim queues each part at most once. */
+function clientRequestId(consumer, messageId, body, index) {
+  const digest = createHash('sha256').update(`${consumer}\n${body}`).digest('hex').slice(0, 8);
+  const id = `iris-${messageId}-${digest}-${index}`;
   return id.length <= 200 ? id : `iris-${createHash('sha256').update(id).digest('hex').slice(0, 40)}`;
 }
 
@@ -167,11 +168,7 @@ async function send(host, payload, messageId, text) {
   if (!body) throw new Error('The reply is empty.');
   lease.busy = true;
   try {
-    if (!lease.draft || lease.draft.text !== body) {
-      const chunks = parts(body);
-      lease.draft = { text: body, chunks, first: lease.sent, done: 0 };
-      lease.sent += chunks.length;
-    }
+    if (!lease.draft || lease.draft.text !== body) lease.draft = { text: body, chunks: parts(body), done: 0 };
     const draft = lease.draft;
     const consumer = consumerId(payload);
     while (draft.done < draft.chunks.length) {
@@ -179,10 +176,11 @@ async function send(host, payload, messageId, text) {
         consumerId: consumer,
         messageId,
         leaseToken: lease.token,
-        clientRequestId: clientRequestId(messageId, lease, draft.first + draft.done),
+        clientRequestId: clientRequestId(consumer, messageId, body, draft.done),
         text: draft.chunks[draft.done],
       });
       draft.done += 1;
+      lease.sent += 1;
     }
     lease.draft = null;
     return draft.chunks.length;
@@ -232,8 +230,15 @@ function messageView(messageId, lease) {
   };
 }
 
+/** Leases held by the automatic reply or the queue cleanup belong to the monitor; agent tools never use them. */
+function agentLease(messageId) {
+  const lease = leases.get(messageId);
+  if (lease?.auto) throw new Error('IRIS is answering this message automatically right now.');
+  return lease;
+}
+
 function openHere() {
-  return [...leases].map(([messageId, lease]) => ({
+  return [...leases].filter(([, lease]) => !lease.auto).map(([messageId, lease]) => ({
     messageId,
     conversation: plain(record(lease.message.conversation).title, 200),
     openUntil: new Date(lease.expiresAt).toISOString(),
@@ -259,6 +264,7 @@ async function open(payload, host) {
   prune();
   const messageId = messageIdArgument(payload);
   const held = leases.get(messageId);
+  if (held?.auto) return { messageId, opened: false, reason: 'auto_reply_in_progress' };
   if (held) return messageView(messageId, held);
   const { lease, reason } = await claim(host, payload, messageId);
   return lease ? messageView(messageId, lease) : { messageId, opened: false, reason };
@@ -269,6 +275,7 @@ async function reply(payload, host) {
   const messageId = messageIdArgument(payload);
   const text = argument(payload, 'text');
   if (typeof text !== 'string' || text.length > REPLY_MAX_CHARS) throw new Error(`text must be at most ${REPLY_MAX_CHARS} characters.`);
+  agentLease(messageId);
   const sent = await send(host, payload, messageId, text);
   return { messageId, sent: true, parts: sent, next: 'Call done with outcome completed once the message is handled.' };
 }
@@ -278,6 +285,7 @@ async function done(payload, host) {
   const messageId = messageIdArgument(payload);
   const outcome = argument(payload, 'outcome');
   if (!OUTCOMES.includes(outcome)) throw new Error('outcome must be completed, retry or dead_letter.');
+  agentLease(messageId);
   return { messageId, ...(await consume(host, payload, messageId, outcome)) };
 }
 
@@ -347,16 +355,16 @@ async function draftReply(payload, host, messages) {
 async function answer(payload, host, unanswered, notify) {
   const newest = unanswered[unanswered.length - 1];
   for (const item of unanswered) remember(autoSettled, item.messageId);
-  const first = await claim(host, payload, newest.messageId);
+  const first = await claim(host, payload, newest.messageId, true);
   if (!first.lease) return;
   const claimed = [{ id: newest.messageId, message: first.lease.message }];
   let sent = false;
   try {
     for (const item of unanswered.slice(0, -1)) {
-      const { lease } = await claim(host, payload, item.messageId);
+      const { lease } = await claim(host, payload, item.messageId, true);
       if (lease) claimed.splice(-1, 0, { id: item.messageId, message: lease.message });
     }
-    if (!canReply(first.lease.scope)) return;
+    if (!canReply(first.lease.scope) || first.lease.sent > 0) return;
     const text = await draftReply(payload, host, claimed.map((item) => item.message));
     let failure = null;
     for (let attempt = 0; attempt < SEND_ATTEMPTS && !sent; attempt += 1) {
@@ -384,6 +392,7 @@ function activityRows(activity) {
   return new Map(list(activity.conversations).map((raw) => {
     const row = record(raw);
     return [row.conversationId, {
+      lastOutboundAt: Date.parse(row.lastOutboundAt) || 0,
       lastReplyAt: Date.parse(row.lastReplyAt) || 0,
       agentReplies: Number(row.agentRepliesSinceOwner) || 0,
       activeLeases: Number(row.activeLeases) || 0,
@@ -394,15 +403,15 @@ function activityRows(activity) {
 /** Messages already answered in QQ never leave the oldest-first queue on their own, so they are completed here. */
 async function settleAnswered(payload, host, answered) {
   for (const item of answered.slice(0, ANSWERED_PER_RUN)) {
-    const { lease } = await claim(host, payload, item.messageId);
+    const { lease } = await claim(host, payload, item.messageId, true);
     if (lease) await consume(host, payload, item.messageId, 'completed');
   }
 }
 
-async function answerOne(payload, host, direct, activity, rows, notify) {
+/** `now` is Message Center's clock, which also stamps the owner's messages, so a skewed device clock cannot fake absence. */
+async function answerOne(payload, host, direct, activity, rows, now, notify) {
   const fresh = direct.filter((item) => !autoSettled.has(item.messageId));
-  if (!fresh.length) return;
-  const now = Date.now();
+  if (!fresh.length || !Number.isFinite(now)) return;
   const ownerLast = Date.parse(activity.lastOutboundAt);
   // Without any message the owner sent, absence cannot be shown, so nothing is sent.
   if (!Number.isFinite(ownerLast) || now - ownerLast < minutes(payload, 'awayMinutes', 30)) return;
@@ -424,18 +433,19 @@ async function poll(payload, host) {
   const mentionMode = choice(payload, 'mentionMode', ['off', 'notify'], 'notify');
   const conversationTypes = [...(privateMode === 'off' ? [] : ['direct']), ...(mentionMode === 'off' ? [] : ['group'])];
   if (!conversationTypes.length) return {};
-  const listed = candidates(await call(host, 'listen_messages', { consumerId: consumerId(payload), limit: 20, conversationTypes }))
-    .filter((item) => ID_RE.test(item.conversationId));
+  const queue = await call(host, 'listen_messages', { consumerId: consumerId(payload), limit: 20, conversationTypes });
+  const listed = candidates(queue).filter((item) => ID_RE.test(item.conversationId));
   if (!listed.length) return {};
   const conversationIds = [...new Set(listed.map((item) => item.conversationId))];
   const activity = await call(host, 'owner_activity', { conversationIds });
   const rows = activityRows(activity);
-  const answered = (item) => item.receivedAt < (rows.get(item.conversationId)?.lastReplyAt ?? 0);
+  // Only the owner's own messages answer one; an agent reply queued later says nothing about messages that arrived meanwhile.
+  const answered = (item) => item.receivedAt < (rows.get(item.conversationId)?.lastOutboundAt ?? 0);
   const waiting = listed.filter((item) => !answered(item));
   const notify = setting(payload, 'notify') !== false;
   if (notify) await announce(host, waiting.filter((item) => !notified.has(item.messageId)));
   for (const item of waiting) remember(notified, item.messageId);
-  if (privateMode === 'auto') await answerOne(payload, host, waiting.filter((item) => item.conversationType === 'direct'), activity, rows, notify);
+  if (privateMode === 'auto') await answerOne(payload, host, waiting.filter((item) => item.conversationType === 'direct'), activity, rows, Date.parse(queue.observedAt), notify);
   await settleAnswered(payload, host, listed.filter(answered));
   return {};
 }
