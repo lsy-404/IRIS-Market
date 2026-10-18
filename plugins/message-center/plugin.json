@@ -2,7 +2,7 @@
   "manifestVersion": 2,
   "id": "message-center",
   "name": "Message Center",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Read and answer QQ messages relayed by your Message Center.",
   "settings": [
     {
@@ -106,6 +106,7 @@
       {
         "name": "reply",
         "handler": "reply",
+        "confirm": true,
         "description": "Reply in the conversation of a message opened on this device, if the conversation's policy allows sending text. Long replies are sent in parts of at most 500 characters.",
         "inputSchema": {
           "type": "object",

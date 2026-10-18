@@ -10,6 +10,7 @@ const BREAK_RE = /[\s。！？!?；;，,]/;
 const REPLY_MAX_CHARS = 2000;
 const AUTO_REPLY_CHARS = 500;
 const AUTO_DATA_MESSAGES = 5;
+const DATA_LIMIT = 15_000;
 const AUTO_MAX_AGE_MS = 24 * 60 * 60_000;
 const AUTO_PER_CONVERSATION = 3;
 const ANSWERED_PER_RUN = 5;
@@ -326,6 +327,18 @@ async function announce(host, fresh) {
   }
 }
 
+/** Shrinks the draft data under the host.complete size limit: earlier context first, then oldest messages, then the newest one's attachments and texts. */
+function fitData(data) {
+  const fits = () => JSON.stringify(data).length <= DATA_LIMIT;
+  if (fits()) return;
+  data.earlier = [];
+  while (!fits() && data.messages.length > 1) data.messages.shift();
+  const last = data.messages[data.messages.length - 1];
+  while (!fits() && last.attachments.length) last.attachments.pop();
+  while (!fits() && last.quoting) last.quoting = last.quoting.slice(0, Math.floor(last.quoting.length / 2));
+  while (!fits() && last.text) last.text = last.text.slice(0, Math.floor(last.text.length / 2));
+}
+
 async function draftReply(payload, host, messages) {
   const persona = plain(setting(payload, 'persona'), 1_500);
   const newest = messages[messages.length - 1];
@@ -343,7 +356,7 @@ async function draftReply(payload, host, messages) {
     }),
     earlier: boundedContext(record(newest.event).context, 4_000),
   };
-  if (JSON.stringify(data).length > 15_000) data.earlier = [];
+  fitData(data);
   const instructions = persona ? `${AUTO_INSTRUCTIONS}\n\nHow the owner wants replies to sound: ${persona}` : AUTO_INSTRUCTIONS;
   const result = record(await host.complete({ instructions, data, maxChars: AUTO_REPLY_CHARS }));
   const text = typeof result.text === 'string' ? result.text.trim() : '';
