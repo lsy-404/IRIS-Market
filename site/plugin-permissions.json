@@ -1,0 +1,15 @@
+{
+  "permissions": [
+    { "id": "prompt:observe", "risk": "low", "label": "Read prompts", "description": "Sees each prompt and response of the agents it targets and may add bounded context." },
+    { "id": "tool:observe", "risk": "medium", "label": "Observe tool calls", "description": "Sees the tool calls and results of the agents it targets." },
+    { "id": "tool:gate", "risk": "medium", "label": "Block tool calls", "description": "May refuse a tool call before it runs." },
+    { "id": "tool:provide", "risk": "medium", "label": "Provide tools", "description": "Adds its own tools to the agents it targets." },
+    { "id": "monitor:run", "risk": "low", "label": "Run in the background", "description": "Runs a periodic check while it is enabled, at most every 30 seconds." },
+    { "id": "notification:publish", "risk": "low", "label": "Show notifications", "description": "Shows notifications in IRIS and on this device; important ones also reach your other devices while you are away." },
+    { "id": "network:fetch", "risk": "medium", "label": "Read public web sources", "description": "Reads the HTTPS addresses it declares, without credentials." },
+    { "id": "subscription:read", "risk": "low", "label": "Read subscription state", "description": "Learns whether an OpenAI Codex subscription is active, without any account details." },
+    { "id": "load:adjust", "risk": "medium", "label": "Adjust automatic work estimate", "description": "May briefly raise or lower the remaining-quota estimate automatic work uses, within a small cap." },
+    { "id": "remote:mcp", "risk": "high", "label": "Connect to a remote service", "description": "IRIS connects to the remote MCP service it declares with your stored token and calls only the tools it lists." },
+    { "id": "model:complete", "risk": "medium", "label": "Use your models", "description": "Asks one of your models for a text answer without tools; external content is passed only as data." }
+  ]
+}

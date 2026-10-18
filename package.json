@@ -2,8 +2,11 @@
   "name": "iris-market",
   "private": true,
   "scripts": {
-    "test": "node --test test/*.test.cjs",
+    "pack": "node scripts/pack-market.cjs",
     "verify": "node scripts/validate-market.cjs"
   },
-  "packageManager": "pnpm@10.34.6"
+  "packageManager": "pnpm@10.34.6",
+  "devDependencies": {
+    "fflate": "0.8.3"
+  }
 }
