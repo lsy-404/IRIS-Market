@@ -6,7 +6,7 @@
     {
       "id": "message-center",
       "name": "Message Center",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "summary": "Lets IRIS agents read and answer QQ messages relayed by your own Message Center, and answers direct messages while you are away.",
       "category": "Messaging",
       "targets": [
@@ -15,8 +15,8 @@
       ],
       "status": "preview",
       "license": "MIT",
-      "commit": "64ef57e6436317c982ebf58cf973b3ef5b796dbe",
-      "publishedAt": "2026-10-18T10:36:26Z",
+      "commit": "6a5c1e6761f534f38525a85e1c648c50ffe1611b",
+      "publishedAt": "2026-10-18T11:04:22Z",
       "requirements": [
         "Your own Message Center, reachable over HTTPS and offering the owner_activity tool",
         "Its agent token",
@@ -48,9 +48,9 @@
       },
       "disclosure": "Gives AI access to every direct message, @mention and explicit request in your QQ immediate queue; reading is not limited by conversation policy. In conversations you enrol in Message Center as trusted with send_text allowed, AI can send text from your QQ account. Each reply an agent sends through the reply tool is confirmed in IRIS. With direct messages set to auto, the default, IRIS answers a direct message without asking once you have been away from QQ for 30 minutes and the message has been unanswered for 5 minutes. The agent token is a full QQ access credential.",
       "package": {
-        "url": "https://iris-market.pages.dev/packages/message-center-0.1.0.zip",
-        "sha256": "6de9bce02c2bfa8a19e8ef7fa90cef6cf7f287537caf31ecc367bbea09332983",
-        "size": 10347,
+        "url": "https://iris-market.pages.dev/packages/message-center-0.1.1.zip",
+        "sha256": "9c86dd7b8811519b248f972547ae233f660de5126274fdfc1350145cc3f9834e",
+        "size": 10558,
         "format": "zip"
       }
     },
