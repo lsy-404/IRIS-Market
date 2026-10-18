@@ -1,11 +1,13 @@
 # Tibo will reset?
 
-An IRIS M-level monitoring plugin for public `@thsottiaux` posts.
+An IRIS management-agent monitoring plugin for public `@thsottiaux` posts.
 
-It runs only while IRIS recognizes an active ChatGPT subscription. A likely
-signal is an important warning; a broad explicit reset announcement is an
-important confirmation. Both are advisory: inspect the actual usage view before
-changing work plans.
+It runs only while IRIS recognizes an active ChatGPT subscription, checking the
+configured feed every 15 minutes. A likely signal is an important warning; a
+broad explicit reset announcement is an important confirmation. Both are
+advisory: inspect the actual usage view before changing work plans.
 
 The plugin has no access to credentials, subscription dates, account labels or
 raw quota windows. Its Load correction is capped and expires automatically.
+The post text never reaches an agent; the management agent only sees the
+signal state and confidence.

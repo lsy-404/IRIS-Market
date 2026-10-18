@@ -114,7 +114,6 @@ async function checkTibo(payload, host) {
   return {
     notification: {
       important: true,
-      kind: confirmed ? 'success' : 'warn',
       title,
       detail,
       dedupeKey: `${signal.state}:${signal.post.id}`,
@@ -137,4 +136,3 @@ function managementContext() {
 
 exports.checkTibo = checkTibo;
 exports.managementContext = managementContext;
-exports._internal = { postsFrom, parseFeed, classify, analyse };

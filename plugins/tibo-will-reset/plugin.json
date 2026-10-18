@@ -2,7 +2,7 @@
   "manifestVersion": 2,
   "id": "tibo-will-reset",
   "name": "Tibo will reset?",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Monitors configured public posts from Tibo. With an active ChatGPT subscription, it publishes a clearly labelled reset signal and only makes a short, capped automatic Load correction.",
   "menu": { "label": "Tibo will reset?" },
   "settings": [
@@ -16,14 +16,14 @@
   ],
   "runtime": {
     "entry": "extension.cjs",
-    "agents": ["M"],
+    "agents": ["management"],
     "permissions": ["prompt:observe", "network:fetch", "subscription:read", "load:adjust", "notification:publish", "monitor:run"],
     "network": {
       "origins": ["https://syndication.twitter.com", "https://x.com"]
     },
-    "monitor": { "intervalMinutes": 15, "handler": "checkTibo" },
+    "monitor": { "intervalSeconds": 900, "handler": "checkTibo" },
     "hooks": [
-      { "event": "before_prompt", "handler": "managementContext", "agents": ["M"] }
+      { "event": "before_prompt", "handler": "managementContext", "agents": ["management"] }
     ]
   }
 }
