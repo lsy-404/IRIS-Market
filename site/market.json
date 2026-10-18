@@ -15,8 +15,8 @@
       ],
       "status": "preview",
       "license": "MIT",
-      "commit": "a229d6e8e90b6cf564c75c2a60da7ee93b5e814a",
-      "publishedAt": "2026-10-18T10:21:41Z",
+      "commit": "64ef57e6436317c982ebf58cf973b3ef5b796dbe",
+      "publishedAt": "2026-10-18T10:36:26Z",
       "requirements": [
         "Your own Message Center, reachable over HTTPS and offering the owner_activity tool",
         "Its agent token",
@@ -49,8 +49,8 @@
       "disclosure": "Gives AI access to every direct message, @mention and explicit request in your QQ immediate queue; reading is not limited by conversation policy. In conversations you enrol in Message Center as trusted with send_text allowed, AI can send text from your QQ account. Each reply an agent sends through the reply tool is confirmed in IRIS. With direct messages set to auto, the default, IRIS answers a direct message without asking once you have been away from QQ for 30 minutes and the message has been unanswered for 5 minutes. The agent token is a full QQ access credential.",
       "package": {
         "url": "https://iris-market.pages.dev/packages/message-center-0.1.0.zip",
-        "sha256": "eee1105aee17afebfddafec4a4041f184ac343a99cd3101aa7fd0365fa984be6",
-        "size": 9902,
+        "sha256": "6de9bce02c2bfa8a19e8ef7fa90cef6cf7f287537caf31ecc367bbea09332983",
+        "size": 10347,
         "format": "zip"
       }
     },

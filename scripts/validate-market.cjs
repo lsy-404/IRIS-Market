@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { unzipSync } = require('fflate');
 const { buildPackage, git, packageName, packageUrl, packagesDir, pluginPath, sha256 } = require('./pack-market.cjs');
 
 const root = path.resolve(__dirname, '..');
@@ -8,6 +9,10 @@ const PLUGIN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const RISKS = new Set(['low', 'medium', 'high']);
 const TARGETS = new Set(['management', 'execution']);
 const STATUSES = new Set(['stable', 'preview']);
+// IRIS refuses larger packages and archives.
+const PACKAGE_MAX_BYTES = 5 * 1024 * 1024;
+const ZIP_MAX_ENTRIES = 200;
+const ZIP_MAX_BYTES = 20 * 1024 * 1024;
 const ENTRY_FIELDS = new Set([
   'id', 'name', 'version', 'summary', 'category', 'targets', 'status', 'license', 'commit', 'publishedAt',
   'package', 'requirements', 'permissions', 'permissionsDetail', 'network', 'mcp', 'disclosure',
@@ -91,7 +96,12 @@ for (const entry of market.plugins) {
   const bytes = fs.readFileSync(file);
   assert.equal(pkg.size, bytes.length, `${id} package size does not match the file`);
   assert.equal(pkg.sha256, sha256(bytes), `${id} package sha256 does not match the file`);
+  assert.ok(bytes.length <= PACKAGE_MAX_BYTES, `${id} package is larger than the ${PACKAGE_MAX_BYTES} bytes IRIS downloads`);
   assert.ok(bytes.equals(buildPackage(id, entry.commit)), `${id} package is stale; run pnpm run pack`);
+  const unpacked = Object.values(unzipSync(bytes));
+  assert.ok(unpacked.length <= ZIP_MAX_ENTRIES, `${id} package has more than the ${ZIP_MAX_ENTRIES} entries IRIS installs`);
+  const unpackedBytes = unpacked.reduce((total, data) => total + data.length, 0);
+  assert.ok(unpackedBytes <= ZIP_MAX_BYTES, `${id} package unpacks to more than the ${ZIP_MAX_BYTES} bytes IRIS installs`);
   packages.add(packageName(entry));
 }
 

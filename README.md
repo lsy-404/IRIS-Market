@@ -64,7 +64,8 @@ strings in IRIS Core and changes only together with them.
 
 `pnpm run verify` checks each entry against its manifest (permissions, targets,
 `network`, `mcp` tools), the permission vocabulary, the package hash and size, that
-the package matches a fresh build of the plugin and that the plugin directory
+the package matches a fresh build of the plugin, IRIS's size limits (package
+at most 5 MB, at most 200 entries and 20 MB unpacked) and that the plugin directory
 is unchanged since `commit`.
 
 ```sh
