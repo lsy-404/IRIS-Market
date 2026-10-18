@@ -15,6 +15,10 @@ function git(args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
 }
 
+function blob(object) {
+  return execFileSync('git', ['cat-file', 'blob', object], { cwd: root, maxBuffer: 64 * 1024 * 1024 });
+}
+
 function pluginPath(id) {
   return `plugins/${id}`;
 }
@@ -31,18 +35,22 @@ function sha256(bytes) {
   return crypto.createHash('sha256').update(bytes).digest('hex');
 }
 
-/** The plugin's tracked files, zipped byte-for-byte reproducibly with plugin.json at the root. */
-function buildPackage(id) {
+/** The plugin's files as committed at `commit`, zipped reproducibly with plugin.json at the root; checkout filters never apply. */
+function buildPackage(id, commit) {
   const prefix = `${pluginPath(id)}/`;
-  const tracked = git(['ls-files', '-z', '--', pluginPath(id)]).split('\0').filter(Boolean);
-  if (!tracked.includes(`${prefix}plugin.json`)) throw new Error(`${pluginPath(id)}/plugin.json is not tracked`);
   const files = {};
-  for (const file of tracked.sort()) {
-    const absolute = path.join(root, file);
-    if (!fs.lstatSync(absolute).isFile()) throw new Error(`${file} is not a regular file`);
-    files[file.slice(prefix.length)] = [fs.readFileSync(absolute), { mtime: MTIME }];
+  for (const line of git(['ls-tree', '-r', '-z', commit, '--', pluginPath(id)]).split('\0').filter(Boolean)) {
+    const [meta, file] = line.split('\t');
+    const [mode, type, object] = meta.split(' ');
+    if (type !== 'blob' || !['100644', '100755'].includes(mode)) throw new Error(`${file} is not a regular file`);
+    files[file.slice(prefix.length)] = [blob(object), { mtime: MTIME }];
   }
-  return Buffer.from(zipSync(files, { level: 9 }));
+  if (!files['plugin.json']) throw new Error(`${pluginPath(id)}/plugin.json is not committed`);
+  return Buffer.from(zipSync(Object.fromEntries(Object.entries(files).sort(([a], [b]) => (a < b ? -1 : 1))), { level: 9 }));
+}
+
+function pluginCommit(id) {
+  return git(['log', '-1', '--format=%H', '--', pluginPath(id)]);
 }
 
 function main() {
@@ -53,7 +61,8 @@ function main() {
     if (git(['status', '--porcelain', '--', pluginPath(entry.id)])) {
       throw new Error(`commit ${pluginPath(entry.id)} before packing it`);
     }
-    const bytes = buildPackage(entry.id);
+    const commit = pluginCommit(entry.id);
+    const bytes = buildPackage(entry.id, commit);
     const digest = sha256(bytes);
     const url = packageUrl(entry);
     const previous = entry.package ?? {};
@@ -62,7 +71,7 @@ function main() {
     }
     fs.writeFileSync(path.join(packagesDir, packageName(entry)), bytes);
     kept.add(packageName(entry));
-    entry.commit = git(['log', '-1', '--format=%H', '--', pluginPath(entry.id)]);
+    entry.commit = commit;
     if (previous.sha256 !== digest) entry.publishedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
     entry.package = { url, sha256: digest, size: bytes.length, format: 'zip' };
   }

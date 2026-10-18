@@ -62,16 +62,19 @@ for (const entry of market.plugins) {
   assert.ok(fs.existsSync(path.join(root, pluginPath(id), String(runtime.entry))), `${id} runtime entry is missing`);
   for (const permission of runtime.permissions ?? []) assert.ok(vocabulary.has(permission), `${id} requests unknown permission ${permission}`);
   assertSet(entry.permissions, runtime.permissions ?? [], `${id} permissions must equal the manifest's`);
-  assert.ok(Array.isArray(entry.permissionsDetail), `${id} needs permissionsDetail`);
-  for (const detail of entry.permissionsDetail) {
-    assert.deepEqual(Object.keys(detail).sort(), ['id', 'reason'], `${id} permissionsDetail items are {id, reason}`);
-    assert.ok(text(detail.reason), `${id} ${detail.id} needs a reason`);
-  }
-  assertSet(entry.permissionsDetail.map((detail) => detail.id), entry.permissions, `${id} permissionsDetail must explain each permission`);
+  const details = entry.permissionsDetail;
+  assert.ok(details && typeof details === 'object' && !Array.isArray(details), `${id} permissionsDetail must map each permission to a reason`);
+  assertSet(Object.keys(details), entry.permissions, `${id} permissionsDetail must explain each permission`);
+  for (const [permission, reason] of Object.entries(details)) assert.ok(text(reason), `${id} ${permission} needs a reason`);
   assert.ok(Array.isArray(entry.targets) && entry.targets.every((target) => TARGETS.has(target)), `${id} targets must be management or execution`);
   assertSet(entry.targets, runtime.agents ?? [], `${id} targets must equal the manifest's agents`);
   assert.deepEqual(entry.network, runtime.network, `${id} network must equal the manifest's`);
-  assert.deepEqual(entry.mcp, runtime.mcp, `${id} mcp must equal the manifest's`);
+  if (runtime.mcp) {
+    assert.deepEqual(Object.keys(entry.mcp ?? {}), ['tools'], `${id} mcp lists only tools`);
+    assert.deepEqual(entry.mcp.tools, runtime.mcp.tools, `${id} mcp tools must equal the manifest's`);
+  } else {
+    assert.equal(entry.mcp, undefined, `${id} declares no MCP server`);
+  }
 
   assert.match(String(entry.commit), /^[0-9a-f]{40}$/, `${id} commit must be a full commit hash`);
   assert.equal(git(['cat-file', '-t', entry.commit]), 'commit', `${id} commit is unknown`);
@@ -88,7 +91,7 @@ for (const entry of market.plugins) {
   const bytes = fs.readFileSync(file);
   assert.equal(pkg.size, bytes.length, `${id} package size does not match the file`);
   assert.equal(pkg.sha256, sha256(bytes), `${id} package sha256 does not match the file`);
-  assert.ok(bytes.equals(buildPackage(id)), `${id} package is stale; run pnpm run pack`);
+  assert.ok(bytes.equals(buildPackage(id, entry.commit)), `${id} package is stale; run pnpm run pack`);
   packages.add(packageName(entry));
 }
 

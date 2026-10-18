@@ -39,8 +39,9 @@ IRIS accepts only `schemaVersion` 2:
 | `status` | `stable` or `preview`. |
 | `targets` | The manifest's `runtime.agents`: `management` and/or `execution`. |
 | `permissions` | The manifest's `runtime.permissions`, as a set. |
-| `permissionsDetail` | One `{ id, reason }` per permission: why this plugin needs it. |
-| `network`, `mcp` | Copies of the manifest's `runtime.network` and `runtime.mcp`, when declared. |
+| `permissionsDetail` | `{ "<permission>": "reason" }` with one key per permission: why this plugin needs it. |
+| `network` | A copy of the manifest's `runtime.network`, when declared. |
+| `mcp` | `{ tools }` from the manifest's `runtime.mcp`, when declared. The address, path and credential settings stay in the manifest. |
 | `package` | `{ url, sha256, size, format: "zip" }`; `url` is `https://iris-market.pages.dev/packages/<id>-<version>.zip`. |
 | `commit` | The commit the package was built from. |
 | `publishedAt` | When this package content was first packed (ISO 8601, UTC). |
@@ -54,14 +55,15 @@ strings in IRIS Core and changes only together with them.
 
 1. Edit the plugin under `plugins/<id>/`, bump its `version` in `plugin.json`
    and in `site/market.json`, and commit the plugin directory.
-2. Run `pnpm run pack`. It zips each plugin's tracked files reproducibly into
+2. Run `pnpm run pack`. It zips each plugin's files as committed (not the
+   checked-out copies, so line-ending conversion never changes a package) into
    `site/packages/`, fills in `package`, `commit` and `publishedAt`, and removes
    packages no entry refers to. A changed package whose version was not bumped
    is refused.
 3. Run `pnpm run verify` and commit the catalogue and packages.
 
 `pnpm run verify` checks each entry against its manifest (permissions, targets,
-`network`, `mcp`), the permission vocabulary, the package hash and size, that
+`network`, `mcp` tools), the permission vocabulary, the package hash and size, that
 the package matches a fresh build of the plugin and that the plugin directory
 is unchanged since `commit`.
 

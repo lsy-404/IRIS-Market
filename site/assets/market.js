@@ -27,14 +27,14 @@ function list(title, values) {
 
 function remoteTargets(plugin) {
   const rows = (plugin.network?.origins ?? []).map((origin) => `Reads ${origin} without credentials`);
-  if (plugin.mcp) rows.push(`IRIS calls ${plugin.mcp.tools.join(', ')} at the address you set, path ${plugin.mcp.path}`);
+  if (plugin.mcp) rows.push(`IRIS calls ${plugin.mcp.tools.join(', ')} on the MCP server at the address you set`);
   return rows.length ? rows : ['None'];
 }
 
 function permissions(plugin, vocabulary) {
   const block = element('div', 'permissions');
   block.append(element('h4', '', 'PERMISSIONS'));
-  const reasons = new Map(plugin.permissionsDetail.map((detail) => [detail.id, detail.reason]));
+  const reasons = new Map(Object.entries(plugin.permissionsDetail ?? {}));
   const items = element('ul');
   plugin.permissions
     .map((id) => vocabulary.get(id) ?? { id, risk: 'high', label: id, description: 'Not in the published permission list.' })

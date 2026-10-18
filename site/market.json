@@ -15,14 +15,8 @@
       ],
       "status": "preview",
       "license": "MIT",
-      "commit": "f48aa7d4dbfa1a7c47774ee68adf8950bf056993",
-      "publishedAt": "2026-10-18T09:55:36Z",
-      "package": {
-        "url": "https://iris-market.pages.dev/packages/message-center-0.1.0.zip",
-        "sha256": "2048d9cadece4718b602651b40514916d437bbd19f06f5e9a7ccfbc95fef15e4",
-        "size": 9420,
-        "format": "zip"
-      },
+      "commit": "a229d6e8e90b6cf564c75c2a60da7ee93b5e814a",
+      "publishedAt": "2026-10-18T10:21:41Z",
       "requirements": [
         "Your own Message Center, reachable over HTTPS and offering the owner_activity tool",
         "Its agent token",
@@ -35,32 +29,14 @@
         "notification:publish",
         "model:complete"
       ],
-      "permissionsDetail": [
-        {
-          "id": "tool:provide",
-          "reason": "Gives agents the pending, open, reply, done and status tools for your QQ queue."
-        },
-        {
-          "id": "remote:mcp",
-          "reason": "IRIS connects to your Message Center with the agent token and calls only listen_messages, claim_message, consume_message, reply_message, connector_status and owner_activity."
-        },
-        {
-          "id": "monitor:run",
-          "reason": "Checks the QQ queue every minute and sends automatic replies when they are due."
-        },
-        {
-          "id": "notification:publish",
-          "reason": "Notifies you of new direct messages and mentions, and of automatic replies."
-        },
-        {
-          "id": "model:complete",
-          "reason": "Drafts automatic replies with your models; QQ messages reach the model only as data."
-        }
-      ],
+      "permissionsDetail": {
+        "tool:provide": "Gives agents the pending, open, reply, done and status tools for your QQ queue.",
+        "remote:mcp": "IRIS connects to your Message Center with the agent token and calls only listen_messages, claim_message, consume_message, reply_message, connector_status and owner_activity.",
+        "monitor:run": "Checks the QQ queue every minute and sends automatic replies when they are due.",
+        "notification:publish": "Notifies you of new direct messages and mentions, and of automatic replies.",
+        "model:complete": "Drafts automatic replies with your models; QQ messages reach the model only as data."
+      },
       "mcp": {
-        "urlSetting": "plugin.message-center.baseUrl",
-        "path": "/mcp",
-        "bearerSetting": "plugin.message-center.agentToken",
         "tools": [
           "listen_messages",
           "claim_message",
@@ -70,7 +46,13 @@
           "owner_activity"
         ]
       },
-      "disclosure": "Gives AI access to every direct message, @mention and explicit request in your QQ immediate queue; reading is not limited by conversation policy. In conversations you enrol in Message Center as trusted with send_text allowed, AI can send text from your QQ account. Each reply an agent sends through the reply tool is confirmed in IRIS. With direct messages set to auto, the default, IRIS answers a direct message without asking once you have been away from QQ for 30 minutes and the message has been unanswered for 5 minutes. The agent token is a full QQ access credential."
+      "disclosure": "Gives AI access to every direct message, @mention and explicit request in your QQ immediate queue; reading is not limited by conversation policy. In conversations you enrol in Message Center as trusted with send_text allowed, AI can send text from your QQ account. Each reply an agent sends through the reply tool is confirmed in IRIS. With direct messages set to auto, the default, IRIS answers a direct message without asking once you have been away from QQ for 30 minutes and the message has been unanswered for 5 minutes. The agent token is a full QQ access credential.",
+      "package": {
+        "url": "https://iris-market.pages.dev/packages/message-center-0.1.0.zip",
+        "sha256": "eee1105aee17afebfddafec4a4041f184ac343a99cd3101aa7fd0365fa984be6",
+        "size": 9902,
+        "format": "zip"
+      }
     },
     {
       "id": "tibo-will-reset",
@@ -103,32 +85,14 @@
         "notification:publish",
         "monitor:run"
       ],
-      "permissionsDetail": [
-        {
-          "id": "prompt:observe",
-          "reason": "Adds the current signal state and confidence, never the post text, to management prompts."
-        },
-        {
-          "id": "network:fetch",
-          "reason": "Reads the public @thsottiaux timeline from syndication.twitter.com or x.com."
-        },
-        {
-          "id": "subscription:read",
-          "reason": "Runs only while a ChatGPT subscription is active."
-        },
-        {
-          "id": "load:adjust",
-          "reason": "After a reset signal, raises the remaining-quota estimate automatic work uses by at most 0.15 for up to two hours."
-        },
-        {
-          "id": "notification:publish",
-          "reason": "Announces a likely or confirmed reset as an important notification."
-        },
-        {
-          "id": "monitor:run",
-          "reason": "Checks the feed every 15 minutes."
-        }
-      ],
+      "permissionsDetail": {
+        "prompt:observe": "Adds the current signal state and confidence, never the post text, to management prompts.",
+        "network:fetch": "Reads the public @thsottiaux timeline from syndication.twitter.com or x.com.",
+        "subscription:read": "Runs only while a ChatGPT subscription is active.",
+        "load:adjust": "After a reset signal, raises the remaining-quota estimate automatic work uses by at most 0.15 for up to two hours.",
+        "notification:publish": "Announces a likely or confirmed reset as an important notification.",
+        "monitor:run": "Checks the feed every 15 minutes."
+      },
       "network": {
         "origins": [
           "https://syndication.twitter.com",
