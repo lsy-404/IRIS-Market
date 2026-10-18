@@ -12,6 +12,8 @@ const AUTO_REPLY_CHARS = 500;
 const AUTO_DATA_MESSAGES = 5;
 const AUTO_MAX_AGE_MS = 24 * 60 * 60_000;
 const AUTO_PER_CONVERSATION = 3;
+const ANSWERED_PER_RUN = 5;
+const LEASE_MS = 5 * 60_000;
 const LEASE_MARGIN_MS = 20_000;
 const SEND_ATTEMPTS = 3;
 const REMEMBERED_MAX = 2_000;
@@ -29,8 +31,6 @@ const leases = new Map();
 const notified = new Set();
 /** Messages an automatic reply has handled or given up on, so it never tries them again. */
 const autoSettled = new Set();
-/** `<conversationId>|<owner's last outbound>` -> automatic replies sent while the owner stays away. */
-const autoCounts = new Map();
 
 function record(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -40,10 +40,9 @@ function list(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function remember(collection, key, value) {
+function remember(collection, key) {
   if (!collection.has(key) && collection.size >= REMEMBERED_MAX) collection.delete(collection.keys().next().value);
-  if (collection instanceof Map) collection.set(key, value);
-  else collection.add(key);
+  collection.add(key);
 }
 
 function plain(value, limit) {
@@ -119,11 +118,12 @@ function candidates(listed) {
 }
 
 async function claim(host, payload, messageId) {
+  // Message Center grants five minutes from its own clock; counting from before the request keeps the deadline local and early.
+  const expiresAt = Date.now() + LEASE_MS;
   const result = await call(host, 'claim_message', { consumerId: consumerId(payload), messageId });
   if (result.acquired !== true) return { lease: null, reason: plain(record(result.race).reason, 60) || 'not_claimable' };
   const message = record(result.message);
-  const expiresAt = Date.parse(message.leaseExpiresAt);
-  if (typeof message.leaseToken !== 'string' || !Number.isFinite(expiresAt)) throw new Error('claim_message returned no lease');
+  if (typeof message.leaseToken !== 'string') throw new Error('claim_message returned no lease');
   const lease = { token: message.leaseToken, expiresAt, scope: record(message.scope), message, sent: 0, draft: null, busy: false };
   leases.set(messageId, lease);
   return { lease };
@@ -344,7 +344,7 @@ async function draftReply(payload, host, messages) {
 }
 
 /** One attempt per message: whatever happens, these messages are never answered automatically again. */
-async function answer(payload, host, unanswered, countKey, notify) {
+async function answer(payload, host, unanswered, notify) {
   const newest = unanswered[unanswered.length - 1];
   for (const item of unanswered) remember(autoSettled, item.messageId);
   const first = await claim(host, payload, newest.messageId);
@@ -368,7 +368,6 @@ async function answer(payload, host, unanswered, countKey, notify) {
       }
     }
     if (!sent) throw failure;
-    remember(autoCounts, countKey, (autoCounts.get(countKey) ?? 0) + 1);
   } finally {
     for (const item of claimed) {
       try {
@@ -381,28 +380,40 @@ async function answer(payload, host, unanswered, countKey, notify) {
   if (sent && notify) await host.notify({ title: `QQ · ${newest.title || 'QQ'}`, detail: '已自动回复', dedupeKey: `auto:${newest.messageId}` });
 }
 
-async function answerOne(payload, host, direct, notify) {
-  const fresh = direct.filter((item) => !autoSettled.has(item.messageId) && ID_RE.test(item.conversationId));
+function activityRows(activity) {
+  return new Map(list(activity.conversations).map((raw) => {
+    const row = record(raw);
+    return [row.conversationId, {
+      lastReplyAt: Date.parse(row.lastReplyAt) || 0,
+      agentReplies: Number(row.agentRepliesSinceOwner) || 0,
+      activeLeases: Number(row.activeLeases) || 0,
+    }];
+  }));
+}
+
+/** Messages already answered in QQ never leave the oldest-first queue on their own, so they are completed here. */
+async function settleAnswered(payload, host, answered) {
+  for (const item of answered.slice(0, ANSWERED_PER_RUN)) {
+    const { lease } = await claim(host, payload, item.messageId);
+    if (lease) await consume(host, payload, item.messageId, 'completed');
+  }
+}
+
+async function answerOne(payload, host, direct, activity, rows, notify) {
+  const fresh = direct.filter((item) => !autoSettled.has(item.messageId));
   if (!fresh.length) return;
-  const conversationIds = [...new Set(fresh.map((item) => item.conversationId))].slice(0, 50);
-  const activity = await call(host, 'owner_activity', { conversationIds });
   const now = Date.now();
   const ownerLast = Date.parse(activity.lastOutboundAt);
   // Without any message the owner sent, absence cannot be shown, so nothing is sent.
   if (!Number.isFinite(ownerLast) || now - ownerLast < minutes(payload, 'awayMinutes', 30)) return;
-  const answeredAt = new Map(list(activity.conversations).map((raw) => {
-    const row = record(raw);
-    return [row.conversationId, Date.parse(row.lastOutboundAt) || 0];
-  }));
   const quiet = minutes(payload, 'unansweredMinutes', 5);
-  for (const conversationId of conversationIds) {
-    if (!answeredAt.has(conversationId)) continue;
-    const unanswered = fresh.filter((item) => item.conversationId === conversationId && item.receivedAt > answeredAt.get(conversationId));
+  for (const conversationId of new Set(fresh.map((item) => item.conversationId))) {
+    const row = rows.get(conversationId);
+    if (!row || row.activeLeases > 0 || row.agentReplies >= AUTO_PER_CONVERSATION) continue;
+    const unanswered = fresh.filter((item) => item.conversationId === conversationId && item.receivedAt > row.lastReplyAt);
     const newest = unanswered[unanswered.length - 1];
     if (!newest || now - newest.receivedAt < quiet || now - newest.receivedAt > AUTO_MAX_AGE_MS) continue;
-    const countKey = `${conversationId}|${activity.lastOutboundAt}`;
-    if ((autoCounts.get(countKey) ?? 0) >= AUTO_PER_CONVERSATION) continue;
-    await answer(payload, host, unanswered, countKey, notify);
+    await answer(payload, host, unanswered, notify);
     return;
   }
 }
@@ -413,11 +424,19 @@ async function poll(payload, host) {
   const mentionMode = choice(payload, 'mentionMode', ['off', 'notify'], 'notify');
   const conversationTypes = [...(privateMode === 'off' ? [] : ['direct']), ...(mentionMode === 'off' ? [] : ['group'])];
   if (!conversationTypes.length) return {};
-  const waiting = candidates(await call(host, 'listen_messages', { consumerId: consumerId(payload), limit: 20, conversationTypes }));
+  const listed = candidates(await call(host, 'listen_messages', { consumerId: consumerId(payload), limit: 20, conversationTypes }))
+    .filter((item) => ID_RE.test(item.conversationId));
+  if (!listed.length) return {};
+  const conversationIds = [...new Set(listed.map((item) => item.conversationId))];
+  const activity = await call(host, 'owner_activity', { conversationIds });
+  const rows = activityRows(activity);
+  const answered = (item) => item.receivedAt < (rows.get(item.conversationId)?.lastReplyAt ?? 0);
+  const waiting = listed.filter((item) => !answered(item));
   const notify = setting(payload, 'notify') !== false;
   if (notify) await announce(host, waiting.filter((item) => !notified.has(item.messageId)));
   for (const item of waiting) remember(notified, item.messageId);
-  if (privateMode === 'auto') await answerOne(payload, host, waiting.filter((item) => item.conversationType === 'direct'), notify);
+  if (privateMode === 'auto') await answerOne(payload, host, waiting.filter((item) => item.conversationType === 'direct'), activity, rows, notify);
+  await settleAnswered(payload, host, listed.filter(answered));
   return {};
 }
 

@@ -29,13 +29,18 @@ Message Center 网页中登记为 trusted 并允许 `send_text` 的会话里，A
    mark it trusted, allow the `send_text` action and choose a reply policy other
    than `none`. A required prefix limits replies to messages that start with it.
 
-The Message Center must offer the `owner_activity` tool.
+The Message Center must offer the `owner_activity` tool with its per-conversation
+`lastReplyAt`, `agentRepliesSinceOwner` and `activeLeases` fields. **Test
+connection** in IRIS also lists the QQ relays and whether they are online.
 
 ## What it does
 
-Every minute IRIS checks the queue without claiming anything and notifies you
-of new direct messages and mentions. Clicking a notification opens IRIS with a
-prompt to look at them.
+Every minute IRIS checks the queue and notifies you of new direct messages and
+mentions. Clicking a notification opens IRIS with a prompt to look at them.
+Messages that already have a later outbound message in their conversation,
+whether you wrote it in QQ or an agent sent it, are not announced; IRIS claims
+up to five of them per minute and marks them completed so they do not hold up
+newer messages in the queue.
 
 Agents get five tools: `pending` lists waiting messages (metadata only),
 `open` claims one for five minutes and returns its content as untrusted data,
@@ -58,17 +63,20 @@ conversation when all of these hold:
   at least **Away after** minutes old (30 by default). Replies sent by agents do
   not count.
 - The newest message in the conversation is at least **Unanswered after**
-  minutes old (5 by default), at most a day old, and you have not written in
-  that conversation since.
-- IRIS has sent fewer than three automatic replies to that conversation since
-  you last wrote anything.
+  minutes old (5 by default), at most a day old, and nothing has been sent in
+  that conversation since, neither by you nor by an agent, queued or delivered.
+- No agent on any device has a message of that conversation open.
+- Agents on all devices together have sent fewer than three messages to that
+  conversation since you last wrote anything. Message Center counts them, so
+  restarting IRIS or adding a device does not reset the count.
 
 IRIS then claims the conversation's unanswered messages, asks one of your
 models for a reply of at most 500 characters, sends it and marks the messages
 completed. The model has no tools and receives the messages only as data,
 together with your optional **Reply persona**. If anything fails, the messages
-go back to the queue and IRIS does not try them again. When several devices
-run IRIS, the claim makes sure only one of them answers.
+go back to the queue and this device does not try them again. When several
+devices run IRIS, the claim makes sure only one of them answers a message, and
+the reply it sends marks the conversation answered for all of them.
 
 Group mentions are never answered automatically. Set **Group mentions** to
 `off` or `notify`, and **Show notifications** off to keep IRIS quiet.

@@ -79,7 +79,8 @@
       "urlSetting": "plugin.message-center.baseUrl",
       "path": "/mcp",
       "bearerSetting": "plugin.message-center.agentToken",
-      "tools": ["listen_messages", "claim_message", "consume_message", "reply_message", "connector_status", "owner_activity"]
+      "tools": ["listen_messages", "claim_message", "consume_message", "reply_message", "connector_status", "owner_activity"],
+      "statusTool": "connector_status"
     },
     "monitor": { "intervalSeconds": 60, "handler": "poll" },
     "tools": [
